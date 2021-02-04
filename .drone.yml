@@ -1,0 +1,42 @@
+kind: pipeline
+type: docker
+name: build
+
+concurrency:
+  limit: 1
+
+steps:
+  - name: docker-build
+    image: plugins/docker
+    settings:
+      dockerfile: ./Dockerfile
+      repo: dock.rythm.online/util/linear-webhook
+      registry: dock.rythm.online
+      tags:
+      - ${DRONE_COMMIT_SHA}
+      username:
+        from_secret: docker_username
+      password:
+        from_secret: docker_password
+    when:
+      event:
+        - push
+  - name: deploy
+    image: quay.io/rythm-bot/drone-kubernetes
+    settings:
+      kubernetes_server: 
+        from_secret: kube_host
+      kubernetes_cert:
+        from_secret: kube_ca_cert
+      kubernetes_token:
+        from_secret: kube_service_token
+      namespace: util
+      deployment: linear-webhook
+      container: linear-webhook
+      repo: dock.rythm.online/util/linear-webhook
+      tag: ${DRONE_COMMIT_SHA}
+    when:
+      branch:
+        - master
+      event:
+        - push
