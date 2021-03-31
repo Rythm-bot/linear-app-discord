@@ -30,7 +30,7 @@ app.post<Request['params'], unknown, IncomingLinearWebhookPayload>('/linear/:web
 app.listen(port, () => console.log(`Webhook consumer listening on port ${port}!`));
 
 function newIssue(payload: IncomingLinearWebhookPayload, webhookTarget: string) {
-  const target = process.env[`WEBHOOK_${webhookTarget}`];
+  const target = process.env[`WEBHOOK_${webhookTarget.toUpperCase()}`];
 
   if (target === undefined) return false;
 
