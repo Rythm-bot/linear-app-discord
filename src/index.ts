@@ -13,6 +13,8 @@ app.use(express.json());
 app.post<Request['params'], unknown, IncomingLinearWebhookPayload>('/linear/:webhookTarget', async (req, res) => {
   const payload = req.body;
 
+  console.log("Recv: ", req);
+                              
   const webhookTarget = req.params.webhookTarget;
 
   if (payload.action === 'create' && payload.type === 'Issue') {
