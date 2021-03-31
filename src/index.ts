@@ -15,15 +15,17 @@ app.post<Request['params'], unknown, IncomingLinearWebhookPayload>('/linear/:web
                               
   const webhookTarget = req.params.webhookTarget;
 
-  console.log("Received webhook event for target ", webhookTarget);
+  console.log("Received webhook event for target", webhookTarget);
 
   if (payload.action === 'create' && payload.type === 'Issue') {
     const result = await newIssue(payload, webhookTarget);
     if (!result)
     {
+      console.log("Invalid target: Webhook env not set");
       res.status(400).send({status: 400, message: "Unknown webhook target."})
       return;
     }
+    console.log("debug result", result);
   }
 
   res.sendStatus(200);
@@ -34,7 +36,7 @@ app.listen(port, () => console.log(`Webhook consumer listening on port ${port}!`
 function newIssue(payload: IncomingLinearWebhookPayload, webhookTarget: string) {
   const target = process.env[`WEBHOOK_${webhookTarget.toUpperCase()}`];
 
-  console.log("Sending webhook to target ", target);
+  console.log("Sending webhook to target", target);
 
   if (target === undefined) return false;
 
