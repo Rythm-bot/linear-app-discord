@@ -10,11 +10,18 @@ const port: number = parseInt(process.env.PORT ?? '3000');
 
 app.use(express.json());
 
-app.post<Request['params'], unknown, IncomingLinearWebhookPayload>('/linear', async (req, res) => {
+app.post<Request['params'], unknown, IncomingLinearWebhookPayload>('/linear/:webhookTarget', async (req, res) => {
   const payload = req.body;
 
+  const webhookTarget = req.params.webhookTarget;
+
   if (payload.action === 'create' && payload.type === 'Issue') {
-    await newIssue(payload);
+    const result = await newIssue(payload, webhookTarget);
+    if (!result)
+    {
+      res.status(400).send({status: 400, message: "Unknown webhook target."})
+      return;
+    }
   }
 
   res.sendStatus(200);
@@ -22,9 +29,16 @@ app.post<Request['params'], unknown, IncomingLinearWebhookPayload>('/linear', as
 
 app.listen(port, () => console.log(`Webhook consumer listening on port ${port}!`));
 
-function newIssue(payload: IncomingLinearWebhookPayload) {
-  return fetch(process.env.WEBHOOK!, {
-    method: 'POST',
+function newIssue(payload: IncomingLinearWebhookPayload, webhookTarget: string) {
+  const target = process.env[`WEBHOOK_${webhookTarget}`];
+
+  if (target === undefined) return false;
+
+  return fetch(target, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json"
+    },
     body: JSON.stringify({
       embeds: [
         {
