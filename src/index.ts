@@ -41,7 +41,7 @@ app.post<Request['params'], unknown, IncomingLinearWebhookPayload>('/linear/:web
 app.listen(port, () => console.log(`Webhook consumer listening on port ${port}!`));
 
 function newComment(payload: IncomingLinearWebhookPayload, webhookTarget: string) {
-  console.log("Sending comment webhook to target", target);
+  console.log("Sending comment webhook to target", webhookTarget);
   return fetch(webhookTarget, {
     method: "POST",
     headers: {
@@ -75,7 +75,7 @@ function newComment(payload: IncomingLinearWebhookPayload, webhookTarget: string
 }
 
 function newIssue(payload: IncomingLinearWebhookPayload, webhookTarget: string) {
-  console.log("Sending issue webhook to target", target);
+  console.log("Sending issue webhook to target", webhookTarget);
   let fields = [
     {
       name: "Priority",
