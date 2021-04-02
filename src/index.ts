@@ -18,17 +18,16 @@ app.use(express.json());
 
 app.post<Request['params'], unknown, IncomingLinearWebhookPayload>('/linear/:webhookTarget', async (req, res) => {
   const payload = req.body;
-
-  console.log("payload", payload);
-
   const webhookTarget = req.params.webhookTarget;
-
-  console.log("webhookTarget", webhookTarget);
-
   const target = process.env[`WEBHOOK_${webhookTarget.toUpperCase()}`];
 
-  if (target === undefined) return res.status(400).send({status: 400, message: "Unknown webhook target."});
+  if (target === undefined) {
+    console.log("Invalid target: Webhook env not set");
+    return res.status(400).send({status: 400, message: "Unknown webhook target."});
+  }
 
+  console.log("Received webhook event for target", webhookTarget);
+  
   if (payload.action === 'create') {
     if (payload.type === 'Issue')
       await newIssue(payload, target);
@@ -42,6 +41,7 @@ app.post<Request['params'], unknown, IncomingLinearWebhookPayload>('/linear/:web
 app.listen(port, () => console.log(`Webhook consumer listening on port ${port}!`));
 
 function newComment(payload: IncomingLinearWebhookPayload, webhookTarget: string) {
+  console.log("Sending comment webhook to target", target);
   return fetch(webhookTarget, {
     method: "POST",
     headers: {
@@ -75,6 +75,7 @@ function newComment(payload: IncomingLinearWebhookPayload, webhookTarget: string
 }
 
 function newIssue(payload: IncomingLinearWebhookPayload, webhookTarget: string) {
+  console.log("Sending issue webhook to target", target);
   let fields = [
     {
       name: "Priority",
