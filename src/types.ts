@@ -10,6 +10,14 @@ export interface IncomingLinearWebhookPayload {
 export interface Data {
   id: string;
   title?: string;
+  issue?: {
+    id: string;
+    title: string;
+  };
+  user?: {
+    id: string;
+    name: string;
+  };
   subscriberIds?: string[];
   previousIdentifiers?: any[];
   createdAt: string;
