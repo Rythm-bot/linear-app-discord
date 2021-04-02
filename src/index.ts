@@ -8,20 +8,32 @@ const app = express();
 
 const port: number = parseInt(process.env.PORT ?? '3000');
 
+const embedFooter = {
+  text: `Linear App`,
+  icon_url:
+    "https://pbs.twimg.com/profile_images/1121592030449168385/MF6whgy1_400x400.png",
+};
+
 app.use(express.json());
 
 app.post<Request['params'], unknown, IncomingLinearWebhookPayload>('/linear/:webhookTarget', async (req, res) => {
   const payload = req.body;
 
+  console.log("payload", payload);
+
   const webhookTarget = req.params.webhookTarget;
 
-  if (payload.action === 'create' && payload.type === 'Issue') {
-    const result = await newIssue(payload, webhookTarget);
-    if (!result)
-    {
-      res.status(400).send({status: 400, message: "Unknown webhook target."})
-      return;
-    }
+  console.log("webhookTarget", webhookTarget);
+
+  const target = process.env[`WEBHOOK_${webhookTarget.toUpperCase()}`];
+
+  if (target === undefined) return res.status(400).send({status: 400, message: "Unknown webhook target."});
+
+  if (payload.action === 'create') {
+    if (payload.type === 'Issue')
+      await newIssue(payload, target);
+    else if (payload.type === 'Comment')
+      await newComment(payload, target);
   }
 
   res.sendStatus(200);
@@ -29,47 +41,72 @@ app.post<Request['params'], unknown, IncomingLinearWebhookPayload>('/linear/:web
 
 app.listen(port, () => console.log(`Webhook consumer listening on port ${port}!`));
 
-function newIssue(payload: IncomingLinearWebhookPayload, webhookTarget: string) {
-  const target = process.env[`WEBHOOK_${webhookTarget.toUpperCase()}`];
-
-  if (target === undefined) return false;
-
-  return fetch(target, {
+function newComment(payload: IncomingLinearWebhookPayload, webhookTarget: string) {
+  return fetch(webhookTarget, {
     method: "POST",
     headers: {
-      "content-type": "application/json"
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({
+      embeds: [
+        {
+          color: 0x73ff73,
+          author: {
+            name: `Comment Created [${getCommentId(payload.url)}]`,
+          },
+          title: `Comment by ${payload.data.user!.name}`,
+          url: payload.url,
+          timestamp: new Date(),
+          fields: [
+            {
+              name: "Content",
+              value: payload.data.body,
+            },
+            {
+              name: "Issue",
+              value: payload.data.issue!.title
+            }
+          ],
+          footer: embedFooter,
+        },
+      ],
+    }),
+  });
+}
+
+function newIssue(payload: IncomingLinearWebhookPayload, webhookTarget: string) {
+  let fields = [
+    {
+      name: "Priority",
+      value: getPriorityValue(payload.data.priority ?? 0),
+      inline: true,
+    }
+  ];
+
+  if (payload.data.labels)
+    fields.push({
+      name: "Labels",
+      value: prettifyLabels(payload.data.labels),
+      inline: false,
+    });
+
+  return fetch(webhookTarget, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
     },
     body: JSON.stringify({
       embeds: [
         {
           color: 0x4752b2,
           author: {
-            name: `Issue Created [${getId(payload.url)}]`,
+            name: `Issue Created [${getIssueId(payload.url)}]`,
           },
           title: payload.data.title,
           url: payload.url,
-          fields: [
-            {
-              name: 'Priority',
-              value: getPriorityValue(payload.data.priority ?? 0),
-              inline: true,
-            },
-            {
-              name: 'Points',
-              value: payload.data.estimate,
-              inline: true,
-            },
-            {
-              name: 'Labels',
-              value: prettifyLabels(payload.data.labels!),
-              inline: false,
-            },
-          ],
+          fields: fields,
           timestamp: new Date(),
-          footer: {
-            text: `Linear App`,
-            icon_url: 'https://pbs.twimg.com/profile_images/1121592030449168385/MF6whgy1_400x400.png',
-          },
+          footer: embedFooter,
         },
       ],
     }),
@@ -99,8 +136,16 @@ function getPriorityValue(priority: NonNullable<IncomingLinearWebhookPayload['da
  * Get the task ID from url
  * @param link task url
  */
-function getId(link: string) {
+function getIssueId(link: string) {
   return link.split('/')[5];
+}
+
+/**
+ * Get the comment ID from url
+ * @param link comment url
+ */
+function getCommentId(link: string) {
+  return link.split('#')[1];
 }
 
 /**
