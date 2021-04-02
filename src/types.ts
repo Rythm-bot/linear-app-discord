@@ -1,13 +1,13 @@
 export interface IncomingLinearWebhookPayload {
   action: 'create' | 'update' | 'remove';
-  data: IssueData;
+  data: Data;
   type: string;
   createdAt: string;
   updatedFrom?: UpdatedFrom;
   url: string;
 }
 
-export interface IssueData {
+export interface Data {
   id: string;
   title?: string;
   issue?: {
